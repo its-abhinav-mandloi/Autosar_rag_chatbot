@@ -519,6 +519,22 @@
         .confidence-badge.medium { background: rgba(212,160,74,0.15); color: var(--warning); }
         .confidence-badge.low { background: rgba(201,107,107,0.15); color: var(--error); }
 
+        .grounding-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            margin-top: 8px;
+            margin-left: 6px;
+            padding: 3px 10px;
+            border-radius: var(--radius-full);
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .grounding-badge.high { background: rgba(109,186,109,0.15); color: var(--success); }
+        .grounding-badge.medium { background: rgba(212,160,74,0.15); color: var(--warning); }
+        .grounding-badge.low { background: rgba(201,107,107,0.15); color: var(--error); }
+
         /* ─── Feedback Buttons ──────────────────────────────────── */
         .feedback-row {
             display: flex;
@@ -635,6 +651,62 @@
             margin-top: 8px;
         }
 
+        .input-options {
+            max-width: 800px;
+            margin: 10px auto 0;
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+        }
+
+        .toggle-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-muted);
+            font-size: 12px;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .toggle-label input {
+            position: absolute;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .toggle-switch {
+            width: 34px;
+            height: 20px;
+            border-radius: var(--radius-full);
+            border: 1px solid var(--border-light);
+            background: var(--bg-tertiary);
+            position: relative;
+            transition: all var(--transition-fast);
+        }
+
+        .toggle-switch::after {
+            content: "";
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--text-muted);
+            transition: all var(--transition-fast);
+        }
+
+        .toggle-label input:checked + .toggle-switch {
+            border-color: var(--accent);
+            background: var(--accent-glow);
+        }
+
+        .toggle-label input:checked + .toggle-switch::after {
+            transform: translateX(14px);
+            background: var(--accent);
+        }
+
         /* ─── Responsive ────────────────────────────────────────── */
         @media (max-width: 768px) {
             .welcome-title { font-size: 28px; }
@@ -714,6 +786,13 @@
                         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
                     </button>
                 </div>
+                <div class="input-options">
+                    <label class="toggle-label" title="Run a slower claim-level check against retrieved sources">
+                        <input type="checkbox" id="grounding-toggle">
+                        <span class="toggle-switch" aria-hidden="true"></span>
+                        <span>Grounding check</span>
+                    </label>
+                </div>
                 <div class="input-hint">Powered by Ollama · llama3.2 + nomic-embed-text · All local, no data leaves your machine</div>
             </div>
         </div>
@@ -733,6 +812,7 @@
         const statusText = document.getElementById('status-text');
         const btnNewChat = document.getElementById('btn-new-chat');
         const ingestStatusArea = document.getElementById('ingest-status-area');
+        const groundingToggle = document.getElementById('grounding-toggle');
         const quickActions = document.querySelectorAll('.quick-action');
 
         const API_BASE = window.location.origin;
@@ -899,6 +979,7 @@
                         question: submittedText,
                         top_k: 5,
                         skip_reranking: true,
+                        evaluate_hallucination: Boolean(groundingToggle?.checked),
                     }),
                 });
 
@@ -968,6 +1049,8 @@
             const confLabel = conf >= 0.7 ? 'High confidence' : conf >= 0.4 ? 'Medium confidence' : 'Low confidence';
             const confidenceHtml = `<span class="confidence-badge ${confLevel}">● ${confLabel} (${(conf * 100).toFixed(0)}%) · ${data.latency_ms?.toFixed(0) || '?'}ms</span>`;
 
+            const groundingHtml = buildGroundingHtml(data.hallucination_evaluation);
+
             // Unique ID for feedback wiring
             const msgId = 'msg-' + Date.now();
 
@@ -986,6 +1069,7 @@
                     <p>${answerHtml}</p>
                     ${citationsHtml}
                     ${confidenceHtml}
+                    ${groundingHtml}
                     ${feedbackHtml}
                 </div>
             `;
@@ -999,6 +1083,17 @@
 
             chatMessages.insertBefore(div, typingIndicator);
             scrollToBottom();
+        }
+
+        function buildGroundingHtml(evaluation) {
+            if (!evaluation) return '';
+
+            const rate = Number(evaluation.hallucination_rate || 0);
+            const faithfulness = Number(evaluation.faithfulness || 0);
+            const level = rate <= 0.1 ? 'high' : rate <= 0.35 ? 'medium' : 'low';
+            const hallucinationPct = (rate * 100).toFixed(0);
+            const faithfulnessPct = (faithfulness * 100).toFixed(0);
+            return `<span class="grounding-badge ${level}">Grounding ${faithfulnessPct}% · hallucination ${hallucinationPct}%</span>`;
         }
 
         // ─── Feedback Submission ────────────────────────────────────

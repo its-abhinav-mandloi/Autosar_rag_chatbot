@@ -26,6 +26,7 @@ from app.config import get_settings
 from app.monitoring.logging_config import get_logger
 from app.monitoring.metrics import Timer, metrics
 from app.services.inference.citations import compute_confidence_score, extract_citations
+from app.services.inference.hallucination import evaluate_answer_grounding
 from app.services.inference.llm import generate_completion
 from app.services.inference.prompt import build_query_prompt, get_system_prompt
 from app.services.retrieval.context import assemble_context, get_source_list
@@ -43,6 +44,10 @@ class QueryRequest(BaseModel):
     top_k: int = Field(default=5, ge=1, le=20, description="Number of source chunks to retrieve")
     document_filter: Optional[str] = Field(default=None, description="Filter to specific document")
     skip_reranking: bool = Field(default=False, description="Skip LLM re-ranking for faster results")
+    evaluate_hallucination: bool = Field(
+        default=False,
+        description="Run an additional claim-level grounding evaluation against retrieved context",
+    )
 
 
 class Citation(BaseModel):
@@ -55,10 +60,30 @@ class Citation(BaseModel):
     implicit: bool = False
 
 
+class ClaimEvaluation(BaseModel):
+    claim: str
+    status: str
+    source_indices: List[int]
+    rationale: str
+
+
+class HallucinationEvaluation(BaseModel):
+    factual_claims: int
+    supported_claims: int
+    contradicted_claims: int
+    unsupported_claims: int
+    not_factual_claims: int
+    hallucination_rate: float
+    faithfulness: float
+    verdict: str
+    claims: List[ClaimEvaluation]
+
+
 class QueryResponse(BaseModel):
     answer: str
     citations: List[Citation]
     confidence: float
+    hallucination_evaluation: Optional[HallucinationEvaluation] = None
     latency_ms: float
     chunks_retrieved: int
     chunks_after_rerank: int
@@ -142,6 +167,7 @@ async def query_documents(request: QueryRequest):
                 answer="No relevant documents found. Please ingest AUTOSAR documents first using the /ingest endpoint.",
                 citations=[],
                 confidence=0.0,
+                hallucination_evaluation=None,
                 latency_ms=timer.elapsed_ms,
                 chunks_retrieved=0,
                 chunks_after_rerank=0,
@@ -223,6 +249,17 @@ async def query_documents(request: QueryRequest):
         citations = extract_citations(answer, ranked_results)
         confidence = compute_confidence_score(ranked_results, citations)
 
+        hallucination_evaluation = None
+        if request.evaluate_hallucination:
+            try:
+                report = await evaluate_answer_grounding(
+                    answer=answer,
+                    context=context,
+                )
+                hallucination_evaluation = HallucinationEvaluation(**report.to_dict())
+            except Exception as e:
+                logger.warning("hallucination_evaluation_failed", error=str(e))
+
     # Record metrics
     metrics.record_query(timer.elapsed_ms)
 
@@ -238,6 +275,7 @@ async def query_documents(request: QueryRequest):
         answer=answer,
         citations=[Citation(**c) for c in citations],
         confidence=confidence,
+        hallucination_evaluation=hallucination_evaluation,
         latency_ms=round(timer.elapsed_ms, 1),
         chunks_retrieved=chunks_retrieved,
         chunks_after_rerank=chunks_after_rerank,

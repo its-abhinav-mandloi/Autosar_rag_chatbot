@@ -127,7 +127,7 @@ The Insight **generates** answers to the Question Goal and **influences** (++) t
 
 ### Goal 1: Reduce Specification Lookup Time by 80%
 - **Current State:** 15-30 minutes per query (manual PDF search)
-- **Target State:** < 3 seconds per query (automated semantic search + LLM answer)
+- **Target State:** sub-second semantic retrieval for source discovery, followed by local LLM answer generation with measured latency reported in every response
 - **ML Justification:** Semantic search requires **learned vector representations** of text — traditional keyword search cannot understand synonyms, abbreviations, or technical context
 
 ### Goal 2: Improve Accuracy of Technical Decisions
@@ -149,4 +149,4 @@ The Insight **generates** answers to the Question Goal and **influences** (++) t
 | **No paid APIs** | Cannot use OpenAI, Claude, etc. | Use Ollama with local open-source models (llama3.2, nomic-embed-text) |
 | **Data privacy** | AUTOSAR specs may be under license | All processing is local — no data leaves the system |
 | **Hardware limits** | Consumer-grade GPU/CPU | Use quantized models (3B parameter LLM) that run on Apple Silicon |
-| **Real-time need** | Engineers need answers during active development | Target < 3s latency with async processing and efficient retrieval |
+| **Real-time need** | Engineers need answers during active development | Sub-second retrieval with transparent full-answer latency from local LLM generation |

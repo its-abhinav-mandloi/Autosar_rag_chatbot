@@ -1,5 +1,6 @@
 # Environment — IMPORTANT: .env may contain local config, never push it
 .env
+.venv/
 *.pyc
 __pycache__/
 *.pyo
@@ -20,8 +21,14 @@ Thumbs.db
 
 # Testing
 .pytest_cache/
+tests/data/
 htmlcov/
 .coverage
+
+# Local report QA artifacts
+report_assets/
+report_render/
+Assigmnet details/
 
 # Distribution
 dist/
