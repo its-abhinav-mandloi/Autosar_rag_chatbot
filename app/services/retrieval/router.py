@@ -163,12 +163,13 @@ async def query_documents(request: QueryRequest):
             )
 
         if not search_results:
+            latency_ms = round((time.perf_counter() - timer.start_time) * 1000, 1)
             return QueryResponse(
                 answer="No relevant documents found. Please ingest AUTOSAR documents first using the /ingest endpoint.",
                 citations=[],
                 confidence=0.0,
                 hallucination_evaluation=None,
-                latency_ms=timer.elapsed_ms,
+                latency_ms=latency_ms,
                 chunks_retrieved=0,
                 chunks_after_rerank=0,
                 model_used=settings.LLM_MODEL,
