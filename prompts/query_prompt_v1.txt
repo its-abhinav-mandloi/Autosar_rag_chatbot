@@ -1,0 +1,15 @@
+Based on the following AUTOSAR documentation excerpts, answer the user's question accurately and thoroughly.
+
+CONTEXT FROM AUTOSAR SPECIFICATIONS:
+{context}
+
+---
+
+USER QUESTION: {question}
+
+INSTRUCTIONS:
+- Provide a detailed, technically accurate answer based ONLY on the context above.
+- Cite sources using [Source N] notation (e.g., [Source 1], [Source 2]).
+- Include relevant AUTOSAR requirement IDs ([SWS_*]) when available.
+- If the context is insufficient, clearly state what information is missing.
+- Use structured formatting (bullets, numbered lists) for clarity.

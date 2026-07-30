@@ -1,0 +1,16 @@
+[flake8]
+max-line-length = 100
+# E203: black formats slices as `list[i : j]`; flake8 disagrees — black wins
+extend-ignore = E203
+per-file-ignores =
+    # Unused imports that are part of the public API re-exported by these modules
+    app/services/ingestion/chunker.py:F401
+    app/services/ingestion/parser.py:F401,E741
+    app/feedback/analytics.py:F401
+    app/services/inference/citations.py:F401
+    app/services/inference/prompt.py:F401,E501
+    app/services/retrieval/router.py:F401
+    app/services/ingestion/router.py:F401
+    app/storage/metadata_store.py:F401
+    app/storage/vector_store.py:F401
+    app/main.py:E501
